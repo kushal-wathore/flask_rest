@@ -1,0 +1,217 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<script type=text/javascript>
+$(window).load(onWindowLoad)
+
+function onWindowLoad(){
+  console.log("window initialized")
+  $("#btnLoad").click(loadApplication)
+  $("#btnDockerize").click(dockerizeApplication)
+  $("#btnRun").click(runApplication)
+  $.ajaxSetup({ cache: false });
+}
+
+function loadApplication()
+{
+    console.log("loading application")
+    $.ajax({
+        url:"http://52.172.179.169/v1/UploadApp",
+        type:"POST",
+        dataType:"json",
+        contentType:"application/json",
+        data:
+        JSON.stringify({
+            "ContainerName":"kushal_110",
+            "ImageName":"first_1"
+        })
+    ,
+    success:function(data, status)
+    {
+        console.log("application loaded")
+        $("#load_status").text("Application Loaded")
+    }
+    }
+    )
+    $("#load_status").text("Application Loading...")
+
+}
+
+function dockerizeApplication()
+{
+    createDockerFile()
+    createImage()
+    createContainer()
+    $("#dockerize_status").text("Application Dockerizing..")
+}
+
+function runApplication()
+{
+    getMLResponse()
+    getMLResponseImage()
+    $("#run_status").text("Application Running, Wait...")
+    $("#output").text("Waiting for output...")
+}
+
+function getMLResponse()
+{
+    console.log("creating response status")
+    $.ajax({
+        //url:"http://52.172.181.26/v1/GetMlResponse",
+        url:"http://52.172.179.169/v1/GetMlResponse",
+        crossDomain: true,
+        success:function(data, status)
+        {
+            $("#run_status").text("Application Execution Completed")
+            $("#output").text(JSON.stringify(data))
+        }
+    }
+    )
+
+}
+
+function getMLResponseImage()
+{
+    console.log("creating response data")
+    $.ajax({
+        //url:"http://52.172.181.26/v1/GetMlResponseImage",
+        url:"http://52.172.179.169/v1/GetMlResponseImage",
+        crossDomain: true,
+        success:function(data, status)
+        {
+        }
+    }
+    )
+
+
+}
+
+function sendImage()
+{
+}
+
+function createDockerFile()
+{
+    console.log("creating a docker file")
+    $.ajax({
+        url:"http://52.172.179.169/v1/CreateDockerFile",
+        type:"POST",
+        dataType:"json",
+        contentType:"application/json",
+        data:
+        JSON.stringify({
+            AppPath:'/home/mahadev/nitin/app', 
+            DockerContents: 
+            {
+                image: {version: '3', name: 'python'}, 
+                workdir: '/app',  
+                copy: [{src: 'app', dst: '/app'}]
+            }
+        }),
+        success:function(data, status)
+        {
+            $("#output").text(JSON.stringify(data.path))
+        }
+    }
+    )
+}
+
+function createContainer()
+{
+    console.log("creating container")
+    $.ajax({
+        url:"http://52.172.179.169/v1/CreateContainer",
+        type:"POST",
+        dataType:"json",
+        contentType:"application/json",
+        data:
+        JSON.stringify({
+            "ContainerName":"kushal_110",
+            "ImageName":"first_1"
+        })
+    ,
+    success:function(data, status)
+    {
+        $("#dockerize_status").text("Application Container Created")
+    }
+    }
+    )
+}
+
+function createImage()
+{
+    console.log("creating image")
+    $.ajax({
+        url:"http://52.172.179.169/v1/CreateImage",
+        type:"POST",
+        dataType:"json",
+        contentType:"application/json",
+        data:
+        JSON.stringify(
+        {
+            "AppPath":"/home/mahadev/nitin/app", 
+            "ImageName":"kushal_110"
+        })
+    ,
+    success:function(data, status)
+    {
+    }
+    }
+    )
+}
+
+function shuffleImages()
+{
+    console.log("shuffle requested")
+    $.post("/test/shuffler",
+    {},
+    function(data, status)
+    {
+      location.reload()
+    }
+   )
+}
+</script>
+
+<div class="container">
+  <h2>Containers on the go!</h2>
+  <p>Upload, Transform and Deploy Containers</p>
+  <div class="row">
+    <div class="col-md-4">
+      <div class="thumbnail">
+         <img src="static\images\floppy.png" alt="Lights" style="width:100%" height="50" width="50">
+          <div class="caption">
+            <p><button type="button" id="btnLoad" class="btn btn-primary btn-block">Load</button></p>
+            <p id="load_status">Not started yet<p>
+          </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="thumbnail">
+          <img src="static\images\docker.png" alt="Nature" style="width:100%">
+          <div class="caption">
+            <p><button type="button" id="btnDockerize" class="btn btn-primary btn-block">Dockerize</button></p>
+            <p id="dockerize_status">Not started yet<p>
+          </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="thumbnail">
+          <img src="static\images\rocket.png" alt="Fjords" style="width:100%">
+          <div class="caption">
+            <p><button type="button" id="btnRun" class="btn btn-primary btn-block">Run</button></p>
+            <p id="run_status">Not started yet<p>
+          </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+  <div class="col-md-4">
+  <p style="color:blue;" id="output">No Output Received Yet<p>
+  </div>
+  </div>
+</div>
+
+
+{% endblock %}

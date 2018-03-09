@@ -1,8 +1,10 @@
+
 {% extends "layout.html" %}
 
 {% block content %}
 
 <script type=text/javascript>
+
 $(window).load(onWindowLoad)
 
 function onWindowLoad(){
@@ -12,53 +14,154 @@ function onWindowLoad(){
   $("#btnRun").click(runApplication)
   $.ajaxSetup({ cache: false });
 }
+function submitDockerizeForm()
+{
 
+
+ var Platform=$('#platformlist').find(":selected").text();
+ var Version=$('#versionlist').find(":selected").text();
+ var Port=document.getElementById("port").value;
+ var Command=document.getElementById("command").value;
+ var ImageName=document.getElementById("Image_Name").value;
+ var Workdir=document.getElementById("workdir").value;
+ var AppName=document.getElementById("app_name").value;
+
+
+if((Port==='') || (Command==='') || (ImageName==='') ||(Platform=='Select Platform') ||(Version=='Select Version') || (Workdir==='')  )
+{
+alert("Please enter appropriate details");
+}
+    
+    $('#myModal').modal('toggle')
+    createDockerFile(Platform,Version,Port,Command,ImageName,Workdir,AppName)
+    $("#dockerize_status").text("Application Dockerizing...")
+}
+
+function submitRunForm()
+{
+  var ImageName=document.getElementById("image_name").value;
+  var Port=document.getElementById("_port").value;
+  var TargetPort=document.getElementById("target_port").value;
+  var DeploymenType=$('#deploymentlist').find(":selected").text();
+  var ContainerName=document.getElementById("container_name").value;
+  
+if((DeploymenType=='Select Deployment Platform') || (ContainerName===''))
+{
+alert("Please enter appropriate details");
+}
+   
+
+$('#myRunModel').modal('toggle')
+if((DeploymenType=='Docker'))
+{  
+  run(ImageName,Port,DeploymenType,ContainerName,TargetPort)  
+}
+else
+{
+alert("Not available");
+}
+  $("#run_status").text("Application Running, Wait...")
+    $("#output").text("Waiting for output...")
+}
+
+function populateRunForm()
+{
+  var DeploymenType=$('#deploymentlist').find(":selected").text();
+  
+  if(DeploymenType=='Docker')
+  {
+  document.getElementById("table1").style.visibility = "visible";
+  }
+  else
+  {
+   document.getElementById("table1").style.visibility = "hidden";
+  }
+}
+
+function populatelist()
+{
+var platform = $('#platformlist').find(":selected").text();
+var versionlist = $('#versionlist').find(":selected").text();
+
+if(platform=='Python' && versionlist==='' )
+{
+var select=document.getElementById("versionlist");
+select.options[select.options.length]= new Option('Select Version');
+select.options[select.options.length]= new Option('2');
+select.options[select.options.length]= new Option('3');
+}
+}
 function loadApplication()
 {
+    $("input").trigger("click");
+	
+    file.onchange = function() {
+       var name = document.getElementById('file'); 
+       var files = file.files;
+   	var len = files.length;
+   
+    var formData = new FormData();
+    formData.append("file", name.files.item(0));
+  
     console.log("loading application")
-    $.ajax({
-        url:"http://52.172.179.169/v1/UploadApp",
-        type:"POST",
-        dataType:"json",
-        contentType:"application/json",
-        data:
-        JSON.stringify({
-            "ContainerName":"kushal_110",
-            "ImageName":"first_1"
-        })
-    ,
-    success:function(data, status)
-    {
+     $("#load_status").text("Application Loading...")
+
+	
+ $.ajax({
+       url: "http://52.172.179.169/v1/UploadApp",
+       type: 'POST',
+       data: formData,
+       async: true,
+       cache: false,
+       contentType: false,
+       enctype: 'multipart/form-data',
+       processData: false,
+	   timeout:0,
+       success: function(data_){
+	   
+	   if(data_.status==false)
+	   {
+	   alert("Error while loading application");
+	   }
+	   else
+	   {
+	     alert("Application successfully loaded");
         console.log("application loaded")
-        $("#load_status").text("Application Loaded")
-    }
-    }
-    )
-    $("#load_status").text("Application Loading...")
+		App_Path = data_.app_path	
+        $("#load_status").text("Application loaded at " + App_Path)
+	   }
+	 
+		
+       },
+       error: function(jqXHR, textStatus, errorThrown) 
+       {
+        alert(textStatus); // this will be "timeout"
+       }
+  	});
 
 }
 
+}
+
+
 function dockerizeApplication()
 {
-    createDockerFile()
-    createImage()
-    createContainer()
-    $("#dockerize_status").text("Application Dockerizing..")
+    $('#myModal').modal('toggle')
+
 }
 
 function runApplication()
 {
-    getMLResponse()
-    getMLResponseImage()
-    $("#run_status").text("Application Running, Wait...")
-    $("#output").text("Waiting for output...")
+
+    $('#myRunModel').modal('toggle')
+   
 }
 
 function getMLResponse()
 {
     console.log("creating response status")
     $.ajax({
-        //url:"http://52.172.181.26/v1/GetMlResponse",
+        //url:"http://52.172.179.169/v1/GetMlResponse",
         url:"http://52.172.179.169/v1/GetMlResponse",
         crossDomain: true,
         success:function(data, status)
@@ -75,7 +178,7 @@ function getMLResponseImage()
 {
     console.log("creating response data")
     $.ajax({
-        //url:"http://52.172.181.26/v1/GetMlResponseImage",
+        //url:"http://52.172.179.169/v1/GetMlResponseImage",
         url:"http://52.172.179.169/v1/GetMlResponseImage",
         crossDomain: true,
         success:function(data, status)
@@ -89,30 +192,49 @@ function getMLResponseImage()
 
 function sendImage()
 {
+alert("Entered send image");
 }
 
-function createDockerFile()
+function createDockerFile(Platform,Version,Port,Command,ImageName,Workdir,AppName)
 {
+
     console.log("creating a docker file")
     $.ajax({
         url:"http://52.172.179.169/v1/CreateDockerFile",
         type:"POST",
+		async: true,
         dataType:"json",
         contentType:"application/json",
+		timeout:0,
         data:
         JSON.stringify({
-            AppPath:'/home/mahadev/nitin/app', 
-            DockerContents: 
-            {
-                image: {version: '3', name: 'python'}, 
-                workdir: '/app',  
-                copy: [{src: 'app', dst: '/app'}]
-            }
+            AppName:AppName,
+			AppPlatform:Platform,
+			Version:Version,
+			Workdir:Workdir,
+			Command:Command
+			
         }),
         success:function(data, status)
-        {
-            $("#output").text(JSON.stringify(data.path))
-        }
+        {  
+		
+		  if(data.status==false)
+			{
+				   alert("Error while creating Dockerfile"); 
+			}
+		else{
+				alert("Docker file created successfully");		    
+                createImage(ImageName,AppName)
+				$("#output").text(JSON.stringify(data.path))
+			}
+
+    		
+        },
+ 	error: function()
+	 {
+           alert("Error while creating Dockerfile"); 
+   	 }
+
     }
     )
 }
@@ -120,10 +242,13 @@ function createDockerFile()
 function createContainer()
 {
     console.log("creating container")
+
     $.ajax({
         url:"http://52.172.179.169/v1/CreateContainer",
         type:"POST",
         dataType:"json",
+	    async: true,
+		timeout:0,
         contentType:"application/json",
         data:
         JSON.stringify({
@@ -134,33 +259,100 @@ function createContainer()
     success:function(data, status)
     {
         $("#dockerize_status").text("Application Container Created")
-    }
+		
+		
+    },
+    error: function()
+    {
+         alert("Error while creating container"); 
+     }
+
     }
     )
 }
 
-function createImage()
+function createImage(ImageName,AppName)
 {
     console.log("creating image")
     $.ajax({
         url:"http://52.172.179.169/v1/CreateImage",
         type:"POST",
         dataType:"json",
+	    async: false,
+		timeout:0,
         contentType:"application/json",
         data:
         JSON.stringify(
         {
-            "AppPath":"/home/mahadev/nitin/app", 
-            "ImageName":"kushal_110"
+            
+            "ImageName":ImageName,
+			"AppName":AppName
         })
     ,
     success:function(data, status)
     {
+       
+
+	  if(data.status == false)
+	  {
+	  alert("Error while creating Image"); 
+	  }
+	  else{
+		alert("Image created successfully");
+		$("#dockerize_status").text("Application Dockerized !")
+	  }
+
+    },
+    error: function()
+    {
+         alert("Error while creating Image"); 
     }
+
     }
     )
 }
 
+function run(ImageName,Port,DeploymenType,ContainerName,TargetPort)
+{
+   console.log("running container")
+   $.ajax({
+        url:"http://52.172.179.169/v1/Run",
+        type:"POST",
+        dataType:"json",
+	    async: true,
+		timeout:0,
+        contentType:"application/json",
+        data:
+        JSON.stringify(
+        {
+            "Port":Port, 
+            "Deployment":DeploymenType,
+            "ContainerName":ContainerName,
+	        "ImageName":ImageName,
+			"TargetPort":TargetPort
+        })
+    ,
+    success:function(data)
+    {
+    
+	  if(data.status == false)
+	  {
+	  alert("Error while creating container"); 
+	  }
+	  else
+	  {
+	  alert("Conatiner created successfully");
+	  }
+    },
+    error: function()
+    {
+         alert("Error while creating container"); 
+     }
+    }
+    )
+
+   
+}
 function shuffleImages()
 {
     console.log("shuffle requested")
@@ -183,6 +375,7 @@ function shuffleImages()
          <img src="static\images\floppy.png" alt="Lights" style="width:100%" height="50" width="50">
           <div class="caption">
             <p><button type="button" id="btnLoad" class="btn btn-primary btn-block">Load</button></p>
+		<input type="file" id="file" name="file" style="display: none"/>
             <p id="load_status">Not started yet<p>
           </div>
       </div>
@@ -191,7 +384,7 @@ function shuffleImages()
       <div class="thumbnail">
           <img src="static\images\docker.png" alt="Nature" style="width:100%">
           <div class="caption">
-            <p><button type="button" id="btnDockerize" class="btn btn-primary btn-block">Dockerize</button></p>
+            <p><button type="button" id="btnDockerize" class="btn btn-primary btn-block" >Dockerize</button></p>
             <p id="dockerize_status">Not started yet<p>
           </div>
       </div>
@@ -212,6 +405,127 @@ function shuffleImages()
   </div>
   </div>
 </div>
+ <!-- Modal -->
+  <div class="modal fade" id="myModal" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Dockerization form</h4>
+        </div>
+        <div class="modal-body">
+		
+		<table>
+		
+		<tr>
+        <td><label>Application Platform:</label></td>
+      	   	
+		<td> <select id="platformlist" onchange="populatelist()">
+		 <option value='Select platform'>Select Platform</option>
+ 		 <option value='Python'>Python</option>
+  		 <option value='C#'>C#</option> 	
+		 </select>
+		</td>
+		</tr>
+		
+		<tr>
+         <td> <label>Version :</label> </td>
+      	 <td><select id="versionlist"> </select></td>
+		</tr>
+		
+	    <tr>
+	    <td><label>Enter the port number :</label></td>
+		<td><input type="text" id="port"/><br></td>
+		</tr>
 
+		<tr>
+	    <td><label>Enter the command to execute:</label></td>
+		<td><input type="text" id="command"/><br></td>
+		</tr>
+
+		<tr>
+	    <td><label>Enter Image Name :</label></td>
+		<td><input type="text" id="Image_Name"/><br></td>
+		</tr>
+		
+		<tr>
+	    <td><label>Enter Working Directory :</label></td>
+		<td><input type="text" id="workdir"/><br></td>
+		</tr>
+		
+		<tr>		
+	    <td><label>Enter Application Folder name :</label></td>
+		<td><input type="text" id="app_name"/><br></td>
+		</tr>
+		
+		</table>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" onclick="submitDockerizeForm()"">Submit</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+</div>
+
+
+  <!-- Modal -->
+  <div class="modal fade" id="myRunModel" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Deployment form</h4>
+        </div>
+        <div class="modal-body">
+       	  
+		 
+         <label>Deployment:</label>
+      	 &nbsp;  	 &nbsp; 
+		 <select id="deploymentlist" onchange="populateRunForm()">
+		 <option value='Select platform'>Select Deployment Platform</option>
+ 		 <option value='Docker'>Docker</option>
+  		 <option value='Kubernetes'>Kubernetes</option> 	
+ 		 <option value='Service Fabric'>Service Fabric</option> 	
+		 </select><br>
+ 
+        <table id="table1" style="visibility:hidden">
+		<tr>
+		<td><label>Enter Container name :</label></td>
+		<td><input type="text" id="container_name" /><br></td>
+		</tr>
+		
+		<tr>
+		<td><label>Enter Conatiner Port :</label></td>
+		<td><input type="text" id="_port" /><br></td>
+		</tr>
+		
+		<tr>
+		<td><label>Enter Target Port :</label></td>
+		<td><input type="text" id="target_port" /><br></td>
+		</tr>
+		
+		<tr>
+		<td><label>Enter Image name :</label></td>
+		<td><input type="text" id="image_name" /><br></td>
+		</tr>
+		</table>
+		
+		
+         <div class="modal-footer">
+          <button type="button" class="btn btn-default" onclick="submitRunForm()">Submit</button>
+        </div>
+      </div>
+
+	  
+
+  
+</div>
 
 {% endblock %}

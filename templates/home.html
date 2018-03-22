@@ -14,27 +14,46 @@ function onWindowLoad(){
   $("#btnRun").click(runApplication)
   $.ajaxSetup({ cache: false });
 }
+
+function environmentSettingsOnFocus()
+{
+ 
+var EnvironmentVariables=document.getElementById("env_settings").value;
+if ((/^\w+(,\w+)*$/.test(EnvironmentVariables)) || EnvironmentVariables===''){
+    var values = EnvironmentVariables.split(',');  
+}
+else
+{
+ alert("Invalid input. Please enter the variables in a comma seperated fashion without a trailing comma!");
+ document.getElementById("env_settings").value='';
+}
+}
+
 function submitDockerizeForm()
 {
 
 
  var Platform=$('#platformlist').find(":selected").text();
  var Version=$('#versionlist').find(":selected").text();
- var Port=document.getElementById("port").value;
+ //var Port=document.getElementById("port").value;
  var Command=document.getElementById("command").value;
  var ImageName=document.getElementById("Image_Name").value;
- var Workdir=document.getElementById("workdir").value;
+ //var Workdir=document.getElementById("workdir").value;
  var AppName=document.getElementById("app_name").value;
+ var EnvironmentVariables=document.getElementById("env_settings").value;
 
 
-if((Port==='') || (Command==='') || (ImageName==='') ||(Platform=='Select Platform') ||(Version=='Select Version') || (Workdir==='')  )
+if((Command==='') || (ImageName==='') ||(Platform=='Select Platform') ||(Version=='Select Version') )
 {
 alert("Please enter appropriate details");
 }
+else
+{
     
     $('#myModal').modal('toggle')
-    createDockerFile(Platform,Version,Port,Command,ImageName,Workdir,AppName)
+    createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables)
     $("#dockerize_status").text("Application Dockerizing...")
+}
 }
 
 function submitRunForm()
@@ -50,20 +69,18 @@ if((DeploymenType=='Select Deployment Platform') || (ContainerName===''))
 alert("Please enter appropriate details");
 }
    
-
+else
+{
 $('#myRunModel').modal('toggle')
 if((DeploymenType=='Docker'))
 {  
   run(ImageName,Port,DeploymenType,ContainerName,TargetPort)  
 }
-else
-{
-alert("Not available");
-}
-  $("#run_status").text("Application Running, Wait...")
-    $("#output").text("Waiting for output...")
-}
 
+  $("#run_status").text("Application Running, Wait...")
+  $("#output").text("Waiting for output...")
+}
+}
 function populateRunForm()
 {
   var DeploymenType=$('#deploymentlist').find(":selected").text();
@@ -122,6 +139,7 @@ function loadApplication()
 	   if(data_.status==false)
 	   {
 	   alert("Error while loading application");
+	    $("#load_status").text("Application loading failed. Retry")
 	   }
 	   else
 	   {
@@ -195,7 +213,7 @@ function sendImage()
 alert("Entered send image");
 }
 
-function createDockerFile(Platform,Version,Port,Command,ImageName,Workdir,AppName)
+function createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables)
 {
 
     console.log("creating a docker file")
@@ -211,8 +229,8 @@ function createDockerFile(Platform,Version,Port,Command,ImageName,Workdir,AppNam
             AppName:AppName,
 			AppPlatform:Platform,
 			Version:Version,
-			Workdir:Workdir,
-			Command:Command
+			Command:Command,
+			EnvironmentVariables:EnvironmentVariables
 			
         }),
         success:function(data, status)
@@ -221,6 +239,7 @@ function createDockerFile(Platform,Version,Port,Command,ImageName,Workdir,AppNam
 		  if(data.status==false)
 			{
 				   alert("Error while creating Dockerfile"); 
+				   $("#dockerize_status").text("Dockerization failed. Retry")
 			}
 		else{
 				alert("Docker file created successfully");		    
@@ -295,7 +314,8 @@ function createImage(ImageName,AppName)
 
 	  if(data.status == false)
 	  {
-	  alert("Error while creating Image"); 
+	   alert("Error while creating Image"); 
+	   $("#dockerize_status").text("Dockerization failed. Retry")
 	  }
 	  else{
 		alert("Image created successfully");
@@ -337,7 +357,9 @@ function run(ImageName,Port,DeploymenType,ContainerName,TargetPort)
     
 	  if(data.status == false)
 	  {
-	  alert("Error while creating container"); 
+	   alert("Error while creating container"); 
+	   $("#run_status").text("Application failed. Retry")
+       $("#output").text("")
 	  }
 	  else
 	  {
@@ -422,7 +444,7 @@ function shuffleImages()
 		<tr>
         <td><label>Application Platform:</label></td>
       	   	
-		<td> <select id="platformlist" onchange="populatelist()">
+		<td> <select id="platformlist" onchange="populatelist()" title="This is the application platform on which your application runs">
 		 <option value='Select platform'>Select Platform</option>
  		 <option value='Python'>Python</option>
   		 <option value='C#'>C#</option> 	
@@ -432,38 +454,38 @@ function shuffleImages()
 		
 		<tr>
          <td> <label>Version :</label> </td>
-      	 <td><select id="versionlist"> </select></td>
+      	 <td><select id="versionlist" title="This is the version of the application platform"> </select></td>
 		</tr>
 		
-	    <tr>
-	    <td><label>Enter the port number :</label></td>
-		<td><input type="text" id="port"/><br></td>
-		</tr>
-
 		<tr>
 	    <td><label>Enter the command to execute:</label></td>
-		<td><input type="text" id="command"/><br></td>
+		<td><input type="text" id="command" title="This is the main method that starts the application"/><br></td>
 		</tr>
 
 		<tr>
 	    <td><label>Enter Image Name :</label></td>
-		<td><input type="text" id="Image_Name"/><br></td>
+		<td><input type="text" id="Image_Name" title="This is the name that will get assigned to docker image"/><br></td>
 		</tr>
 		
-		<tr>
+		<!--<tr>
 	    <td><label>Enter Working Directory :</label></td>
 		<td><input type="text" id="workdir"/><br></td>
+		</tr>-->
+		
+		<tr>
+	    <td><label>Enter Environment Settings :</label></td>
+		<td><input type="text" id="env_settings" title="Enter environment settings in a space seperated fashion" onfocusout="environmentSettingsOnFocus()" /><br></td>
 		</tr>
 		
 		<tr>		
 	    <td><label>Enter Application Folder name :</label></td>
-		<td><input type="text" id="app_name"/><br></td>
+		<td><input type="text" id="app_name" title="This is the name of the folder which contains your applictaion"/><br></td>
 		</tr>
 		
 		</table>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" onclick="submitDockerizeForm()"">Submit</button>
+        <button type="button" class="btn btn-default" onclick="submitDockerizeForm()">Submit</button>
         </div>
       </div>
       
@@ -488,7 +510,7 @@ function shuffleImages()
 		 
          <label>Deployment:</label>
       	 &nbsp;  	 &nbsp; 
-		 <select id="deploymentlist" onchange="populateRunForm()">
+		 <select id="deploymentlist" onchange="populateRunForm()" title="This list all the available deployment types for running docker image">
 		 <option value='Select platform'>Select Deployment Platform</option>
  		 <option value='Docker'>Docker</option>
   		 <option value='Kubernetes'>Kubernetes</option> 	
@@ -498,22 +520,22 @@ function shuffleImages()
         <table id="table1" style="visibility:hidden">
 		<tr>
 		<td><label>Enter Container name :</label></td>
-		<td><input type="text" id="container_name" /><br></td>
+		<td><input type="text" id="container_name" title="This is the name that will be assinged to your application container"/><br></td>
 		</tr>
 		
 		<tr>
-		<td><label>Enter Conatiner Port :</label></td>
-		<td><input type="text" id="_port" /><br></td>
+		<td><label>Enter port for running service :</label></td>
+		<td><input type="text" id="_port" title="This is the port on which your application's service runs"/><br></td>
 		</tr>
 		
 		<tr>
-		<td><label>Enter Target Port :</label></td>
-		<td><input type="text" id="target_port" /><br></td>
+		<td><label>Enter port for exposing container :</label></td>
+		<td><input type="text" id="target_port" title="This is the port on which you want to expose your container"/><br></td>
 		</tr>
 		
 		<tr>
 		<td><label>Enter Image name :</label></td>
-		<td><input type="text" id="image_name" /><br></td>
+		<td><input type="text" id="image_name" title="This is the docker image which is to be used to containerize your application" /><br></td>
 		</tr>
 		</table>
 		

@@ -12,9 +12,6 @@ import pprint
 import os.path
 import sys
 import os
-sys.path.insert(0,'../')
-sys.path.insert(1, '../object_detection/')
-from object_detection import try_1
 from flask_rest import app
 import subprocess
 import time
@@ -28,9 +25,6 @@ IMAGE_DIR = "/home/mahadev/test/"
 
 def unzip(path):
 
-	#fantasy_zip = zipfile.ZipFile(path)
-	#fantasy_zip.extractall(path)
-	#fantasy_zip.close()
 	with zipfile.ZipFile(path,"r") as zip_ref:
 		zip_ref.extractall(IMAGE_DIR)
 	
@@ -78,7 +72,7 @@ def _create_container(container_name, image_name, port ,target_port):
 
 	return True
 
-def _python_application(app_path,version,workdir,cmd):
+def _python_application(app_path, version, workdir, cmd, envs):
 	docker_contents = {}
 	requirment_flag = False
 	pprint.pprint("requirment_flag_flase")
@@ -98,6 +92,14 @@ def _python_application(app_path,version,workdir,cmd):
 								  {"command": "workdir","args": ["/usr/src/app/"+ str(workdir)]}]
 
 		docker_contents['cmd'] = [{"command": "python"+str(version),"args": [str(cmd)]}]
+		if envs:
+			env_list = []
+			for env in envs:
+				envname = str(env).split(' ')[0]
+				envvalue = str(env).split(' ')[1]
+				env_list.append({'envname': envname, 'envvalue': envvalue})
+				
+			docker_contents['env'] = env_list
 
 	pprint.pprint(docker_contents)
 
@@ -110,17 +112,26 @@ def v1_create_docker_file():
 	pprint.pprint(request.json)
 	pprint.pprint("Docker file creation.....")
 	path = None
-	#app_path = str(request.json['AppPath'])
+	envs = []
 	app_name = request.json['AppName']
-	#app_path = IMAGE_DIR + 'app/'
 	app_path = IMAGE_DIR + app_name
-	#docker_contents = request.json['DockerContents']
+
 	docker_file_path = "Dockerfile"
 	if str(request.json['AppPlatform']).lower() == 'python':
 		version = request.json['Version']
 		workdir = request.json['Workdir']
+		if workdir==app_name:
+			workdir=str()
+		elif '/'in workdir:
+			indexOfslash=workdir.index('/')+1
+			workdir=workdir[indexOfslash:]
+						
+		env = request.json['EnvironmentVariables']
+		if len(str(env)) != 0:
+			envs =  str(env).split(',') 
+
 		cmd = request.json['Command']
-		docker_contents = _python_application(app_path,version,workdir,cmd)
+		docker_contents = _python_application(app_path, version, workdir, cmd, envs)
 		if not bool(docker_contents):
 			return jsonify(status=False, path=path)
 
@@ -153,7 +164,7 @@ def v1_create_docker_file():
 		if docker_contents.get('env'):
 				for env_num in range (0, len(docker_contents['env'])):
 						env = docker_contents['env'][env_num]
-						f.write('ENV ' + env['envname'] + '=' + env['envvalue'] + '\n')
+						f.write('ENV ' + env['envname'] + ' ' + env['envvalue'] + '\n')
 		if docker_contents.get('expose'):
 				for expose_port in docker_contents.get('expose'):
 						f.write('EXPOSE ' + str(expose_port) + '\n')
@@ -182,11 +193,9 @@ def v1_create_image():
 	if not stderr:
 		print("Docker image created successfully, You can check with \"docker images\" command.")
 		return jsonify(status=True)
-		return "Docker image created successfully, You can check with \"docker images\" command."
 
 	pprint.pprint(stdout)
 	return jsonify(status=False)
-	return "Image Creation Failed"
 
 @app.route("/v1/Run", methods=["POST"])
 def v1_run():
@@ -247,7 +256,6 @@ def v1_upload_app():
 		print (directory)
 		os.mkdir(directory)
 		mv_cmd = 'find ' + app_path + ' -type f | xargs -i mv {} ' + directory 
-		#mv_cmd = 'mv -R ' + app_path + ' ' + directory
 		print("cmd")
 		print(mv_cmd)
 		stdout, stderr = run_command(mv_cmd)

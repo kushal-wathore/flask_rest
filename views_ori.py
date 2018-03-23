@@ -75,15 +75,15 @@ def _create_container(container_name, image_name, port ,target_port):
 def _python_application(app_path, version, workdir, cmd, envs):
 	docker_contents = {}
 	requirment_flag = False
-	pprint.pprint("requirment_flag_false")
+	pprint.pprint("requirment_flag_flase")
 	print(app_path)
-	if not os.path.isfile(os.path.join((app_path),'requirements.txt')):
+	if not os.path.isfile((app_path)+ '/' + 'requirements.txt'):
 		python_dependancy_cmd  = 'pipreqs ' + str(app_path)
 		stdout,stderr = run_command(python_dependancy_cmd)
 		if ("Successfully saved requirements" in str(stderr)) or ("already exists" in str(stderr)):
 			requirment_flag = True
 			
-	if os.path.isfile(os.path.join((app_path),'requirements.txt')) or requirment_flag:
+	if os.path.isfile((app_path)+ '/' + 'requirements.txt') or requirment_flag:
 		pprint.pprint("requirment_flag_true")
 		docker_contents['image'] = {"name": "python", "version": version}
 		docker_contents['copy'] = [{"src": ".", "dst": "/usr/src/app/"}]
@@ -135,7 +135,7 @@ def v1_create_docker_file():
 		if not bool(docker_contents):
 			return jsonify(status=False, path=path)
 
-	path = os.path.join((app_path),docker_file_path)
+	path = (app_path)+'/'+docker_file_path
 	pprint.pprint(path)
 	pprint.pprint(docker_contents)
 
@@ -237,7 +237,6 @@ def v1_upload_app():
 	print (app_path)
 	print ("file_name_without_extension")
 	print (file_name_without_extension)
-	"""
 	dir_cmd = 'find ' +  app_path + ' -maxdepth 1 -mindepth 1 -type d'
 	print("dir_cmd")
 	print(dir_cmd)
@@ -264,7 +263,6 @@ def v1_upload_app():
 		print("stderr", stderr)
 		if stderr:
 			return jsonify(status=False, app_path=app_path)
-	"""
 
 	return jsonify(status=True, app_path=app_path)
 
@@ -301,5 +299,4 @@ def v1_get_ml_image_response():
                 if file.endswith('obj.png'):
                         file_path = os.path.join(IMAGE_DIR, file)
         return send_file(file_path, mimetype='image/gif')
-
 

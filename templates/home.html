@@ -38,12 +38,12 @@ function submitDockerizeForm()
  //var Port=document.getElementById("port").value;
  var Command=document.getElementById("command").value;
  var ImageName=document.getElementById("Image_Name").value;
- //var Workdir=document.getElementById("workdir").value;
+ var Workdir=document.getElementById("workdir").value;
  var AppName=document.getElementById("app_name").value;
  var EnvironmentVariables=document.getElementById("env_settings").value;
 
 
-if((Command==='') || (ImageName==='') ||(Platform=='Select Platform') ||(Version=='Select Version') )
+if((Command==='') || (ImageName==='') ||(Platform=='Select Platform') ||(Version=='Select Version') ||(Workdir===''))
 {
 alert("Please enter appropriate details");
 }
@@ -51,7 +51,7 @@ else
 {
     
     $('#myModal').modal('toggle')
-    createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables)
+    createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables,Workdir)
     $("#dockerize_status").text("Application Dockerizing...")
 }
 }
@@ -64,7 +64,7 @@ function submitRunForm()
   var DeploymenType=$('#deploymentlist').find(":selected").text();
   var ContainerName=document.getElementById("container_name").value;
   
-if((DeploymenType=='Select Deployment Platform') || (ContainerName===''))
+if((DeploymenType=='Select Deployment Platform') || (ContainerName==='') || (Port==='') || (ImageName==='') || (TargetPort==='') )
 {
 alert("Please enter appropriate details");
 }
@@ -213,7 +213,7 @@ function sendImage()
 alert("Entered send image");
 }
 
-function createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables)
+function createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables,Workdir)
 {
 
     console.log("creating a docker file")
@@ -230,7 +230,8 @@ function createDockerFile(Platform,Version,Command,ImageName,AppName,Environment
 			AppPlatform:Platform,
 			Version:Version,
 			Command:Command,
-			EnvironmentVariables:EnvironmentVariables
+			EnvironmentVariables:EnvironmentVariables,
+			Workdir:Workdir
 			
         }),
         success:function(data, status)
@@ -297,7 +298,7 @@ function createImage(ImageName,AppName)
         url:"http://52.172.179.169/v1/CreateImage",
         type:"POST",
         dataType:"json",
-	    async: false,
+	    async: true,
 		timeout:0,
         contentType:"application/json",
         data:
@@ -466,20 +467,20 @@ function shuffleImages()
 	    <td><label>Enter Image Name :</label></td>
 		<td><input type="text" id="Image_Name" title="This is the name that will get assigned to docker image"/><br></td>
 		</tr>
-		
-		<!--<tr>
-	    <td><label>Enter Working Directory :</label></td>
-		<td><input type="text" id="workdir"/><br></td>
-		</tr>-->
-		
+			
 		<tr>
 	    <td><label>Enter Environment Settings :</label></td>
-		<td><input type="text" id="env_settings" title="Enter environment settings in a space seperated fashion" onfocusout="environmentSettingsOnFocus()" /><br></td>
+		<td><input type="text" id="env_settings" title="Enter environment settings in a space seperated fashion"/><br></td>
 		</tr>
 		
 		<tr>		
 	    <td><label>Enter Application Folder name :</label></td>
 		<td><input type="text" id="app_name" title="This is the name of the folder which contains your applictaion"/><br></td>
+		</tr>
+		
+		<tr>
+	    <td><label>Enter Working Directory :</label></td>
+		<td><input type="text" id="workdir" title="Provide the excat working directory of the application else it would be same as application folder name"/><br></td>
 		</tr>
 		
 		</table>

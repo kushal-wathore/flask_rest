@@ -7,12 +7,40 @@
 
 $(window).load(onWindowLoad)
 
+var ip
+var processid
+var task
+var interval
+var upload_type
+var IsPush=false
+var TargetPort
+var App_Path
 function onWindowLoad(){
-  console.log("window initialized")
-  $("#btnLoad").click(loadApplication)
+  //var xhttp = new XMLHttpRequest();
+ // xhttp.onreadystatechange = function() {
+   // if (this.readyState == 4 && this.status == 200) {
+   // myFunction(this);
+    //}
+ // };
+ // xhttp.open("GET","/static/scripts/Config.xml",true);
+  //xhttp.open("GET","/Config.xml",true);
+ // xhttp.send();
+  
+  console.log("window initialized") 
+  $("#btnLoad").click(load)
   $("#btnDockerize").click(dockerizeApplication)
   $("#btnRun").click(runApplication)
   $.ajaxSetup({ cache: false });
+}
+
+function myFunction(xml) {
+
+  var i;
+  var xmlDoc = xml.responseXML;
+  txt = xmlDoc.getElementsByTagName("IpAddress")[0].childNodes[0].nodeValue;
+  ip=txt
+
+
 }
 
 function environmentSettingsOnFocus()
@@ -42,6 +70,10 @@ function submitDockerizeForm()
  var AppName=document.getElementById("app_name").value;
  var EnvironmentVariables=document.getElementById("env_settings").value;
 
+ if (document.getElementById('docker_hub_Yes').checked) {
+  IsPush = true
+ }
+
 
 if((Command==='') || (ImageName==='') ||(Platform=='Select Platform') ||(Version=='Select Version') ||(Workdir===''))
 {
@@ -60,7 +92,7 @@ function submitRunForm()
 {
   var ImageName=document.getElementById("image_name").value;
   var Port=document.getElementById("_port").value;
-  var TargetPort=document.getElementById("target_port").value;
+  TargetPort=document.getElementById("target_port").value;
   var DeploymenType=$('#deploymentlist').find(":selected").text();
   var ContainerName=document.getElementById("container_name").value;
   
@@ -108,6 +140,85 @@ select.options[select.options.length]= new Option('2');
 select.options[select.options.length]= new Option('3');
 }
 }
+
+function load()
+{
+  $('#myLoadModal').modal('toggle')
+}
+
+function onUploadChange()
+{
+ //<option value='Python'>Local Machine</option>
+  		 //<option value='C#'>Cloud</option> 	
+	upload_type = $('#uploadlist').find(":selected").text();
+	//if(upload_type=='Local Machine')
+	//{
+	//	loadApplication();
+	//}
+	if(upload_type=='Cloud')
+	{
+	document.getElementById("tbl_appUpload").style.visibility = "visible";
+	
+	}
+}
+
+function submitApplicationUploadForm()
+{
+	 $("#load_status").text("Application Loading...")
+	$('#myLoadModal').modal('toggle')
+    if(upload_type=='Local Machine')
+	{
+		loadApplication();
+	}
+	else{
+	
+	var Url=document.getElementById("txt_url").value;
+	//alert("cloud upload");
+	
+	
+	$.ajax({
+       // url:"http://"+ip+"/v1/CreateDockerFile",
+	     url:"http://52.172.179.169/v1/UploadAppUrl",
+        type:"POST",
+		async: true,
+        dataType:"json",
+        contentType:"application/json",
+		timeout:900000,
+        data:
+        JSON.stringify({
+            Url:Url
+        }),
+        success:function(data, status)
+        {  
+		
+		  if(data.status==false)
+			{
+				   alert("Error while loading application"); 
+				 
+			}
+		  else{
+				//alert("This is the data "+data.app_path);
+				
+				check_process_status(data.process,"UploadApp")
+				//alert("Application successfully loaded");
+				//console.log("application loaded")
+				App_Path = data.app_path	
+				//$("#load_status").text("Application loaded at " + App_Path)				
+               
+			}
+
+    		
+        },
+ 	error: function()
+	 {
+           alert("Error while loading application"); 
+   	 }
+
+    }
+    )	
+	}
+
+}
 function loadApplication()
 {
     $("input").trigger("click");
@@ -143,10 +254,10 @@ function loadApplication()
 	   }
 	   else
 	   {
-	     alert("Application successfully loaded");
+	    alert("Application successfully loaded");
         console.log("application loaded")
 		App_Path = data_.app_path	
-        $("#load_status").text("Application loaded at " + App_Path)
+        $("#load_status").text("Application loaded at " + " " +App_Path)
 	   }
 	 
 		
@@ -179,8 +290,8 @@ function getMLResponse()
 {
     console.log("creating response status")
     $.ajax({
-        //url:"http://52.172.179.169/v1/GetMlResponse",
         url:"http://52.172.179.169/v1/GetMlResponse",
+        //url:"http://"+ip+"/v1/GetMlResponse",
         crossDomain: true,
         success:function(data, status)
         {
@@ -204,8 +315,6 @@ function getMLResponseImage()
         }
     }
     )
-
-
 }
 
 function sendImage()
@@ -216,14 +325,16 @@ alert("Entered send image");
 function createDockerFile(Platform,Version,Command,ImageName,AppName,EnvironmentVariables,Workdir)
 {
 
+
     console.log("creating a docker file")
     $.ajax({
-        url:"http://52.172.179.169/v1/CreateDockerFile",
+       // url:"http://"+ip+"/v1/CreateDockerFile",
+	     url:"http://52.172.179.169/v1/CreateDockerFile",
         type:"POST",
 		async: true,
         dataType:"json",
         contentType:"application/json",
-		timeout:0,
+		timeout:900000,
         data:
         JSON.stringify({
             AppName:AppName,
@@ -264,7 +375,8 @@ function createContainer()
     console.log("creating container")
 
     $.ajax({
-        url:"http://52.172.179.169/v1/CreateContainer",
+       // url:"http://"+ip+"/v1/CreateContainer",
+	    url:"http://52.172.179.169/v1/CreateContainer",
         type:"POST",
         dataType:"json",
 	    async: true,
@@ -291,15 +403,211 @@ function createContainer()
     )
 }
 
-function createImage(ImageName,AppName)
+function check_process_status(process,task_name)
 {
-    console.log("creating image")
-    $.ajax({
-        url:"http://52.172.179.169/v1/CreateImage",
+processid=process
+task=task_name
+ $.ajax({
+        //url:"http://"+ip+"/v1/CreateImage",
+		url:"http://52.172.179.169/v1/ProcessStatus",
+        type:"POST",
+        dataType:"json",
+	    async: true,
+        contentType:"application/json",
+        data:
+        JSON.stringify(
+        {            
+            "Process":processid
+        })
+    ,
+    success:function(data)
+    {
+	
+	  if(data.status==1)
+	  {
+	       if(interval!=undefined)
+			{
+				
+			clearTimeout(interval);
+				
+			}
+			
+		   if(data.stderr.length==0)
+		   {
+				
+				if(task=='createImage')
+				{
+					alert("Image created successfully");
+			
+					$("#dockerize_status").text("Application Dockerized !")	
+					if(IsPush)
+					{
+					$("#dockerize_status").text("Application Dockerized! Pushing Image to Hub...")	
+					loginToDockerHub();
+					}
+				
+				}
+				if(task=='createContainer')
+				{
+					alert("Conatiner created successfully");
+					$("#run_status").text("Application Containerized ! Endpoint : http://52.172.179.169:"+TargetPort)
+					
+				}
+				if(task=='pushImage')
+				{
+					alert("Image pushed successfully to Docker Hub created");
+					$("#dockerize_status").text("Image pushed to Docker Hub!")
+					
+				}
+				if(task=='UploadApp')
+				{
+					alert("Application successfully loaded");
+					console.log("application loaded")
+					$("#load_status").text("Application loaded at"+ App_Path)
+				}
+			}
+			else
+			{
+			
+				if(task=='createImage')
+				{
+					alert("Image creation Failed !"+"  "+data.stderr);
+				}
+				if(task=='createContainer')
+				{
+					alert("Container creation Failed !"+"  "+data.stderr);
+				}
+				if(task=='pushImage')
+				{
+					alert("Pusing image Failed !"+"  "+data.stderr);
+				}
+				if(task=='UploadApp')
+				{
+					alert("Application upload Failed !"+"  "+data.stderr);
+		
+				}				
+			}
+	  }
+	  
+	  if(data.status==0)
+	  {
+	   succeed=false
+
+	   interval = setTimeout(function(){check_process_status(processid,task);},30000);  
+
+	  }
+	  
+	  if(data.status==2)
+	  {
+	     if(interval!=null)
+		 {
+		 clearTimeout(interval);
+		 }
+	  }
+    }
+})
+
+}
+
+function loginToDockerHub()
+{
+ $.ajax({
+       // url:"http://"+ip+"/v1/CreateContainer",
+	    url:"http://52.172.179.169/v1/LoginDockerHub",
         type:"POST",
         dataType:"json",
 	    async: true,
 		timeout:0,
+        contentType:"application/json"
+    ,
+    success:function(data, status)
+    {
+      if(data.status==1)
+	  {
+		pushImageToHub();
+	  }
+	  
+    },
+    error: function()
+    {
+         alert("Error while logging to Docker Hub"); 
+     }
+
+    }
+    )
+}
+
+function logoutFromDockerHub()
+{
+ $.ajax({
+       // url:"http://"+ip+"/v1/CreateContainer",
+	    url:"http://52.172.179.169/v1/LogoutDockerHub",
+        type:"POST",
+        dataType:"json",
+	    async: true,
+		timeout:0,
+        contentType:"application/json"
+    ,
+    success:function(data, status)
+    {
+      if(data.status==1)
+	  {
+		alert("Logged out from hub");
+	  }
+	  
+    },
+    error: function()
+    {
+         alert("Error while logging out from Docker Hub"); 
+     }
+
+    }
+    )
+}
+
+function pushImageToHub()
+{
+	$.ajax({
+       // url:"http://"+ip+"/v1/CreateContainer",
+	    url:"http://52.172.179.169/v1/PushImage",
+        type:"POST",
+        dataType:"json",
+	    async: true,
+		timeout:0,
+        contentType:"application/json"
+    ,
+    success:function(data, status)
+    {
+      if(data.status == true)
+	  {
+		//alert("Image sucessfully pushed to Docker Hub")
+		 check_process_status(data.process,"pushImage");
+		
+	  }
+	  else{
+	   alert("Error while pushing image to Docker hub"); 
+	  }
+	  
+    },
+    error: function()
+    {
+         alert("Error while pushing image to Docker hub"); 
+     }
+
+    }
+    )
+
+}
+function createImage(ImageName,AppName)
+{
+    console.log("creating image")
+    $.ajax({
+        //url:"http://"+ip+"/v1/CreateImage",
+		url:"http://52.172.179.169/v1/CreateImage",
+        type:"POST",
+        dataType:"json",
+	    async: true,
+		timeout:900000,
         contentType:"application/json",
         data:
         JSON.stringify(
@@ -315,18 +623,24 @@ function createImage(ImageName,AppName)
 
 	  if(data.status == false)
 	  {
+	  //alert("Image created successfully");
 	   alert("Error while creating Image"); 
-	   $("#dockerize_status").text("Dockerization failed. Retry")
+	   //$("#dockerize_status").text("Dockerization failed. Retry")
 	  }
 	  else{
-		alert("Image created successfully");
-		$("#dockerize_status").text("Application Dockerized !")
+	   check_process_status(data.process,"createImage");
+	   //setInterval(check_process_status(data.process),9000);
+		//setTimeout(show(),1000);
+	    
+		
+	
 	  }
 
     },
     error: function()
     {
-         alert("Error while creating Image"); 
+         //alert("Image created successfully");
+		 //alert("Error while creating Image"); 
     }
 
     }
@@ -337,7 +651,8 @@ function run(ImageName,Port,DeploymenType,ContainerName,TargetPort)
 {
    console.log("running container")
    $.ajax({
-        url:"http://52.172.179.169/v1/Run",
+        //url:"http://"+ip+"/v1/Run",
+		url:"http://52.172.179.169/v1/Run",
         type:"POST",
         dataType:"json",
 	    async: true,
@@ -364,7 +679,8 @@ function run(ImageName,Port,DeploymenType,ContainerName,TargetPort)
 	  }
 	  else
 	  {
-	  alert("Conatiner created successfully");
+	    check_process_status(data.process,"createContainer");
+	    //alert("Conatiner created successfully");
 	  }
     },
     error: function()
@@ -483,10 +799,54 @@ function shuffleImages()
 		<td><input type="text" id="workdir" title="Provide the excat working directory of the application else it would be same as application folder name"/><br></td>
 		</tr>
 		
+		<tr>
+		<td><label>Push Image to Docker Hub :</label></td>
+		<td>
+		 <input type="radio" id="docker_hub_Yes" value="Yes">Yes<br>
+         <input type="radio" id="docker_hub_No" value="No"> No<br>
+		</td>
+		</tr>
+		
 		</table>
 
         <div class="modal-footer">
         <button type="button" class="btn btn-default" onclick="submitDockerizeForm()">Submit</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="modal fade" id="myLoadModal" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Application load form</h4>
+        </div>
+        <div class="modal-body">
+		
+		
+        <label>Application Platform:</label>
+      	   	
+		<select id="uploadlist" onchange="onUploadChange()" >
+		 <option value='Select the mode of uploading application'>Select Mode</option>
+ 		 <option value='Python'>Local Machine</option>
+  		 <option value='C#'>Cloud</option> 	
+		 </select><br>
+		
+		<table id="tbl_appUpload" style="visibility:hidden">
+             <tr><td><label id="lbl_url">Enter the url :</label></td>
+      	     <td><input type="text" id="txt_url" /></td>
+		     </tr>
+		 </table>
+	
+        <div class="modal-footer">
+        <button type="button" class="btn btn-default" onclick="submitApplicationUploadForm()">Submit</button>
         </div>
       </div>
       

@@ -20,20 +20,44 @@ def run(args):
 	print("Starting unzip")
 	#with zipfile.ZipFile(save_path,"r") as zip_ref:
 		#zip_ref.extractall(IMAGE_DIR)
-	unzip(save_path,IMAGE_DIR)
-	
+	zip = zipfile.ZipFile(save_path, 'r')
+	destination_name = os.path.join(IMAGE_DIR,blob_name[:blob_name.rfind('.')])
+	print(destination_name)
+	unzip1(destination_name,zip)
 	print("Downloaded")
 
 def unzip(path,IMAGE_DIR):
-
+    	
 	with zipfile.ZipFile(path,"r") as zip_ref:
 		zip_ref.extractall(IMAGE_DIR)
 	
 	return "\""+path+"\" was unzipped successfully."
+	
+
+def unzip1(path, zip):
+    # If the output location does not yet exist, create it
+    #
+    if not isdir(path):
+        os.makedirs(path)
+
+    for each in zip.namelist():
+
+        # Check to see if the item was written to the zip file with an
+        # archive name that includes a parent directory. If it does, create
+        # the parent folder in the output workspace and then write the file,
+        # otherwise, just write the file to the workspace.
+        #
+        if not each.endswith('/'):
+            root, name = split(each)
+            directory = normpath(join(path, root))
+            if not isdir(directory):
+                os.makedirs(directory)
+            open(join(directory, name), 'wb').write(zip.read(each))
+
+
 
 from azure.storage.blob import BlockBlobService
-import sys
-import zipfile
-import os.path
+import sys, zipfile, os
+from os.path import isdir, join, normpath, split
 args = sys.argv
 sys.exit(run(args))

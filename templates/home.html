@@ -157,25 +157,44 @@ function onUploadChange()
 	//}
 	if(upload_type=='Cloud')
 	{
-	document.getElementById("tbl_appUpload").style.visibility = "visible";
-	
+	document.getElementById("tbl_appUpload").style.visibility = "visible";	
+	}
+	else
+	{
+	document.getElementById("tbl_appUpload").style.visibility = "hidden";	
 	}
 }
 
 function submitApplicationUploadForm()
 {
-	 $("#load_status").text("Application Loading...")
+upload_type = $('#uploadlist').find(":selected").text();
+
+if(upload_type=='Select the mode of uploading application')
+{
+alert("Please select valid mode for uploading application");
+}
+else
+{
+
+
 	$('#myLoadModal').modal('toggle')
     if(upload_type=='Local Machine')
 	{
 		loadApplication();
 	}
 	else{
+	 
 	
 	var Url=document.getElementById("txt_url").value;
 	//alert("cloud upload");
-	
-	
+
+	if(Url==='')
+	{
+		alert("Please enter the url");
+	}
+	else
+	{
+	$("#load_status").text("Application Loading...")
 	$.ajax({
        // url:"http://"+ip+"/v1/CreateDockerFile",
 	     url:"http://52.172.179.169/v1/UploadAppUrl",
@@ -217,10 +236,12 @@ function submitApplicationUploadForm()
     }
     )	
 	}
-
+	}
+}
 }
 function loadApplication()
 {
+	
     $("input").trigger("click");
 	
     file.onchange = function() {
@@ -835,8 +856,8 @@ function shuffleImages()
       	   	
 		<select id="uploadlist" onchange="onUploadChange()" >
 		 <option value='Select the mode of uploading application'>Select Mode</option>
- 		 <option value='Python'>Local Machine</option>
-  		 <option value='C#'>Cloud</option> 	
+ 		 <option value='Local Machine'>Local Machine</option>
+  		 <option value='Cloud'>Cloud</option> 	
 		 </select><br>
 		
 		<table id="tbl_appUpload" style="visibility:hidden">
